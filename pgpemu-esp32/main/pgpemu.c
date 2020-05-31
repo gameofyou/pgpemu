@@ -3,7 +3,9 @@
 #include "freertos/event_groups.h"
 #include "freertos/queue.h"
 #include "driver/uart.h"
-#include "hwcrypto/aes.h"
+#include "esp32/aes.h"
+#include "esp_bt_defs.h"
+#include "esp_gatt_defs.h"
 
 #define EX_UART_NUM UART_NUM_0
 
@@ -134,21 +136,21 @@ static struct gatts_profile_inst pgp_profile_tab[PROFILE_NUM] = {
 };
 
 /* Service */
-static const uint16_t GATTS_SERVICE_UUID_TEST      = 0x00FF;
-static const uint16_t GATTS_CHAR_UUID_TEST_A       = 0xFF01;
-static const uint16_t GATTS_CHAR_UUID_TEST_B       = 0xFF02;
-static const uint16_t GATTS_CHAR_UUID_TEST_C       = 0xFF03;
+// static const uint16_t GATTS_SERVICE_UUID_TEST      = 0x00FF;
+// static const uint16_t GATTS_CHAR_UUID_TEST_A       = 0xFF01;
+// static const uint16_t GATTS_CHAR_UUID_TEST_B       = 0xFF02;
+// static const uint16_t GATTS_CHAR_UUID_TEST_C       = 0xFF03;
 
 static const uint16_t primary_service_uuid         = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t character_declaration_uuid   = ESP_GATT_UUID_CHAR_DECLARE;
 static const uint16_t character_client_config_uuid = ESP_GATT_UUID_CHAR_CLIENT_CONFIG;
 static const uint8_t char_prop_read                =  ESP_GATT_CHAR_PROP_BIT_READ;
 static const uint8_t char_prop_write               = ESP_GATT_CHAR_PROP_BIT_WRITE;
-static const uint8_t char_prop_read_write_notify   = ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
+// static const uint8_t char_prop_read_write_notify   = ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
 static const uint8_t char_prop_read_notify   = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
 static const uint8_t char_prop_notify   = ESP_GATT_CHAR_PROP_BIT_NOTIFY;
 static const uint8_t dummy_value[2]      = {0x00, 0x00};
-static const uint8_t char_value[4]                 = {0x11, 0x22, 0x33, 0x44};
+// static const uint8_t char_value[4]                 = {0x11, 0x22, 0x33, 0x44};
 static uint8_t cert_buffer[378];
 
 
@@ -369,7 +371,7 @@ static void generate_first_challenge()
     memset(session_key, 0x43, 16);
     uint8_t outer_nonce[16];
     memset(outer_nonce, 0x44, 16);
-    generate_chal_0(bt_mac, the_challenge, main_nonce, session_key, outer_nonce,
+    pgp_generate_chal_0(bt_mac, the_challenge, main_nonce, session_key, outer_nonce,
 		    (struct challenge_data *)cert_buffer);
 }
 
@@ -494,7 +496,7 @@ void handle_protocol(esp_gatt_if_t gatts_if,
 
 			struct next_challenge* chal = (struct next_challenge*)temp;
 			memset(temp, 0, sizeof(temp));
-			generate_next_chal(0, session_key, nonce, chal);
+			pgp_generate_next_chal(0, session_key, nonce, chal);
 			temp[0] = 0x01;
 
 			memcpy(cert_buffer, temp, 52);
@@ -518,7 +520,7 @@ void handle_protocol(esp_gatt_if_t gatts_if,
 		ESP_LOGI(GATTS_TABLE_TAG, "Received: %d", datalen);
 		uint8_t temp[20];
 		memset(temp, 0, sizeof(temp));
-		decrypt_next(prepare_buf, session_key, temp+4);
+		pgp_decrypt_next(prepare_buf, session_key, temp+4);
 		temp[0] = 0x02;
 		uint8_t notify_data[4];
 		memset(notify_data, 0, 4);
@@ -539,7 +541,7 @@ void handle_protocol(esp_gatt_if_t gatts_if,
 		ESP_LOGI(GATTS_TABLE_TAG, "Cert state==2 Received: %d", datalen);
 		uint8_t temp[20];
 		memset(temp, 0, sizeof(temp));
-		decrypt_next(prepare_buf, session_key, temp+4);
+		pgp_decrypt_next(prepare_buf, session_key, temp+4);
 		ESP_LOGI(GATTS_TABLE_TAG, "DEBUG:");
 		esp_log_buffer_hex(GATTS_TABLE_TAG, temp, sizeof(temp));
 
@@ -572,7 +574,7 @@ void handle_protocol(esp_gatt_if_t gatts_if,
 	case 4:
         {
 		memset(cert_buffer, 0, 4);
-		generate_reconnect_response(session_key, prepare_buf+4, cert_buffer + 4);
+		pgp_generate_reconnect_response(session_key, prepare_buf+4, cert_buffer + 4);
 		cert_buffer[0] = 5;
 
 		esp_log_buffer_hex(GATTS_TABLE_TAG, cert_buffer, 20);

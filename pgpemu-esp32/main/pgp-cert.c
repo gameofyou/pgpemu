@@ -10,12 +10,12 @@
 
 #include "esp_log.h"
 
-void aes_encrypt(AES_Context *ctx, const uint8_t *inp, uint8_t *out)
+void pgp_aes_encrypt(AES_Context *ctx, const uint8_t *inp, uint8_t *out)
 {
 	esp_aes_crypt_ecb(ctx, ESP_AES_ENCRYPT, inp, out);
 }
 
-void aes_setkey(AES_Context *ctx, const uint8_t *key)
+void pgp_aes_setkey(AES_Context *ctx, const uint8_t *key)
 {
 	esp_aes_init( ctx );
 	esp_aes_setkey(ctx, key, 128);
@@ -28,13 +28,13 @@ void aes_setkey(AES_Context *ctx, const uint8_t *key)
 
 
 
-void aes_encrypt(AES_Context *ctx, const uint8_t *inp, uint8_t *out)
+void pgp_aes_encrypt(AES_Context *ctx, const uint8_t *inp, uint8_t *out)
 {
 	memcpy(out, inp, 16);
 	AES_ECB_encrypt(ctx, out);
 }
 
-void aes_setkey(AES_Context *ctx, const uint8_t *key)
+void pgp_aes_setkey(AES_Context *ctx, const uint8_t *key)
 {
 	AES_init_ctx(ctx, key);	
 }
@@ -47,7 +47,7 @@ uint8_t flash_data[10] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 
 
 
-void hexdump(const char *msg, const uint8_t *data, int len)
+void pgp_hexdump(const char *msg, const uint8_t *data, int len)
 {
 #ifdef ESP_PLATFORM
         ESP_LOGI("PGPEMU", "%s", msg);	
@@ -82,7 +82,7 @@ void init_nonce_hash(const uint8_t *inp_nonce,
 /**
  * iv is 16 bytes
  */
-void aes_hash(AES_Context *ctx,
+void pgp_aes_hash(AES_Context *ctx,
 	      const uint8_t *nonce,
 	      const uint8_t *data,
 	      const int count,
@@ -94,7 +94,7 @@ void aes_hash(AES_Context *ctx,
 
 	init_nonce_hash(nonce, count, nonce_hash);
 	
-	aes_encrypt(ctx, nonce_hash, tmp); //encrypt nonce
+	pgp_aes_encrypt(ctx, nonce_hash, tmp); //encrypt nonce
 	int blocks = count/16;
 	const uint8_t *tmpdata = data;
 	for (int i =0; i < blocks; i++) {
@@ -103,7 +103,7 @@ void aes_hash(AES_Context *ctx,
 		}
 		tmpdata += 16;
 		memcpy(tmp2, tmp, 16);	//copy to temp
-		aes_encrypt(ctx, tmp2, tmp);
+		pgp_aes_encrypt(ctx, tmp2, tmp);
 
 	}
 	memcpy(output, tmp, 16);
@@ -129,7 +129,7 @@ void encrypt_block(AES_Context *ctx,
 
 	init_nonce_ctr(nonce, nonce_ctr);
 
-	aes_encrypt(ctx, nonce_ctr, tmp);
+	pgp_aes_encrypt(ctx, nonce_ctr, tmp);
 	
 	for (int i = 0; i < 16; i++) {
 		output[i] = tmp[i] ^ nonce_iv[i];
@@ -147,7 +147,7 @@ void inc_ctr(uint8_t * ctr)
 }
 
 
-void aes_ctr(AES_Context *ctx, const uint8_t *nonce,
+void pgp_aes_ctr(AES_Context *ctx, const uint8_t *nonce,
 	     const uint8_t *data, int count,
 	     uint8_t *output)
 {
@@ -162,7 +162,7 @@ void aes_ctr(AES_Context *ctx, const uint8_t *nonce,
 
 	for (int i = 0; i < blocks; i++) {
 		inc_ctr(ctr);
-		aes_encrypt(ctx, ctr, ectr);
+		pgp_aes_encrypt(ctx, ctr, ectr);
 		
 		for (int j = 0; j < 16; j++) {
 			*outptr = ectr[j] ^ *tmpdata;
@@ -172,7 +172,7 @@ void aes_ctr(AES_Context *ctx, const uint8_t *nonce,
 	}
 }
 
-void generate_nonce(uint8_t *nonce)
+void pgp_generate_nonce(uint8_t *nonce)
 {
 	for (int i =0; i < 16; i++) {
 		//random quality is not important
@@ -180,7 +180,7 @@ void generate_nonce(uint8_t *nonce)
 	}
 }
 
-void generate_chal_0(const uint8_t *mac,
+void pgp_generate_chal_0(const uint8_t *mac,
 		     const uint8_t *the_challenge,
 		     const uint8_t *main_nonce,
 		     const uint8_t *main_key,		     
@@ -201,10 +201,10 @@ void generate_chal_0(const uint8_t *mac,
 	memcpy(main_data.nonce, main_nonce, 16);
 	memcpy(main_data.flash_data, flash_data, 10);
 	
-	aes_setkey(&ctx, main_key);
-	aes_ctr(&ctx, main_data.nonce, the_challenge, 16, 
+	pgp_aes_setkey(&ctx, main_key);
+	pgp_aes_ctr(&ctx, main_data.nonce, the_challenge, 16, 
 		main_data.encrypted_challenge);
-	aes_hash(&ctx, main_data.nonce, the_challenge, 16, tmp_hash);
+	pgp_aes_hash(&ctx, main_data.nonce, the_challenge, 16, tmp_hash);
 	encrypt_block(&ctx, tmp_hash, main_data.nonce, main_data.encrypted_hash);
 	
 	//outer layer
@@ -213,15 +213,15 @@ void generate_chal_0(const uint8_t *mac,
 	memcpy(output->bt_addr, revmac, 6);
 	memcpy(output->blob, BLOB, 256);
 
-	aes_setkey(&ctx, DEVICE_KEY);
-	aes_hash(&ctx, output->nonce, (uint8_t *)&main_data, 80, tmp_hash);
+	pgp_aes_setkey(&ctx, DEVICE_KEY);
+	pgp_aes_hash(&ctx, output->nonce, (uint8_t *)&main_data, 80, tmp_hash);
 	encrypt_block(&ctx, tmp_hash, output->nonce, output->encrypted_hash);
-	aes_ctr(&ctx, output->nonce, (uint8_t *)&main_data, 80, 
+	pgp_aes_ctr(&ctx, output->nonce, (uint8_t *)&main_data, 80, 
 		output->encrypted_main_challenge);
 	
 }
 
-void generate_next_chal(const uint8_t *indata, const uint8_t *key, const uint8_t *nonce, struct next_challenge *output)
+void pgp_generate_next_chal(const uint8_t *indata, const uint8_t *key, const uint8_t *nonce, struct next_challenge *output)
 {
 	AES_Context ctx;	
 	uint8_t data[16];
@@ -236,48 +236,48 @@ void generate_next_chal(const uint8_t *indata, const uint8_t *key, const uint8_t
 
 	memcpy(output->nonce, nonce, 16);
 
-	aes_setkey(&ctx, key);
-	aes_ctr(&ctx, output->nonce, data, 16, output->encrypted_challenge);
+	pgp_aes_setkey(&ctx, key);
+	pgp_aes_ctr(&ctx, output->nonce, data, 16, output->encrypted_challenge);
 
-	aes_hash(&ctx, output->nonce, data, 16, tmp_hash);
+	pgp_aes_hash(&ctx, output->nonce, data, 16, tmp_hash);
 	encrypt_block(&ctx, tmp_hash, output->nonce, output->encrypted_hash);	
 }
 
 
-int decrypt_next(const uint8_t *data, const uint8_t *key, uint8_t *output)
+int pgp_decrypt_next(const uint8_t *data, const uint8_t *key, uint8_t *output)
 {
 	AES_Context ctx;
 
 	const struct next_challenge *chal;
-	aes_setkey(&ctx, key);
+	pgp_aes_setkey(&ctx, key);
 	chal = (const struct next_challenge *)data;
-	aes_ctr(&ctx, chal->nonce, chal->encrypted_challenge, 16, output);
+	pgp_aes_ctr(&ctx, chal->nonce, chal->encrypted_challenge, 16, output);
 
-	hexdump("CHAL 2:", output, 16); //this is sent to APP
+	pgp_hexdump("CHAL 2:", output, 16); //this is sent to APP
 	
 	uint8_t enc_nonce[16];
 	memset(enc_nonce, 0, 16);	
 	encrypt_block(&ctx, chal->encrypted_hash, chal->nonce, enc_nonce);
 
-	hexdump("Enc nonce :", enc_nonce, 16);
+	pgp_hexdump("Enc nonce :", enc_nonce, 16);
 
 	uint8_t hash_1[16];	
 	memset(hash_1, 0, 16);
 	//test if hash is correct/same
-	aes_hash(&ctx, chal->nonce, output, 16, hash_1);
+	pgp_aes_hash(&ctx, chal->nonce, output, 16, hash_1);
 
-	hexdump("Hash: ", hash_1, 16);
+	pgp_hexdump("Hash: ", hash_1, 16);
 	return memcmp(hash_1, enc_nonce, 16) == 0;
 }
 
 
-void generate_reconnect_response(const uint8_t *key,
+void pgp_generate_reconnect_response(const uint8_t *key,
 				 const uint8_t *challenge,
 				 uint8_t *output)
 {
 	AES_Context ctx;
-	aes_setkey(&ctx, key);
-	aes_encrypt(&ctx, challenge, output);
+	pgp_aes_setkey(&ctx, key);
+	pgp_aes_encrypt(&ctx, challenge, output);
 	for (int i = 0; i < 16; i++) {
 		output[i] ^= challenge[i+16];
 	}
