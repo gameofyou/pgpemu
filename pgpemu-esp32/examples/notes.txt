@@ -1,0 +1,2 @@
+To safely add your own pogo+ key blob and to do other customisation
+copy this pgpemu_custom to the custom directory.
