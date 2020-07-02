@@ -9,6 +9,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "sdkconfig.h"
+#ifdef CONFIG_TFT_PREDEFINED_DISPLAY_TYPE
 #include "tftspi.h"
 #include "tft.h"
 
@@ -72,3 +74,11 @@ void pgp_display_init(void)
 //TFT_print("Time is not set yet", CENTER, CENTER);
 
 }
+#else
+
+void pgp_display_init(void)
+{
+
+}
+
+#endif

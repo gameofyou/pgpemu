@@ -4,7 +4,7 @@
 #include "secrets.h"
 
 //you can uncomment this line if you just want to test out the algorithms
-#error You are still using fake keys, checkout http:/tinyhack.com
+#error You are still using fake keys please see https://github.com/Jesus805/Suota-Go-Plus
 
 uint8_t MAC[6] = {0x01, 0x02, 0x02, 0x03, 0x04, 0x05};
 
