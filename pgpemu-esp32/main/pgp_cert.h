@@ -1,5 +1,5 @@
-#ifndef PGP_CERT_H
-#define PGP_CERT_H
+#ifndef __PGP_CERT_H__
+#define __PGP_CERT_H__
 
 #include <stdint.h>
 

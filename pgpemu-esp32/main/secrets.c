@@ -1,3 +1,6 @@
+#include "sdkconfig.h"
+
+#ifndef PGPEMU_CUSTOM
 #include "secrets.h"
 
 //you can uncomment this line if you just want to test out the algorithms
@@ -56,3 +59,5 @@ uint8_t DEVICE_KEY[16] = {
 	0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b,
 	0x0c, 0x0d, 0x0e
 };
+
+#endif /* ! PGPEMU_CUSTOM */

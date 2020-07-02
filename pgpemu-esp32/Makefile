@@ -3,9 +3,10 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := pgpemu
-
-COMPONENT_ADD_INCLUDEDIRS := components/include
-
-include $(IDF_PATH)/make/project.mk
+all:
+	@echo Use:
+	@echo idf.py menuconfig
+	@echo idf.py build
+	@echo idf.py flash
+	@echo idf.py monitor
 

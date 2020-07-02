@@ -1,5 +1,5 @@
-#ifndef DEVICE_KEY_H
-#define DEVICE_KEY_H
+#ifndef __DEVICE_KEY_H__
+#define __DEVICE_KEY_H__
 
 #include <stdint.h>
 

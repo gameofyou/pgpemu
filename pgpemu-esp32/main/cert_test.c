@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "pgp-cert.h"
+#include "pgp_cert.h"
 #include "secrets.h"
 
 #ifndef ESP_PLATFORM

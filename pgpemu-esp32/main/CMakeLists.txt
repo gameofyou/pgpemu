@@ -1,4 +1,7 @@
-set(COMPONENT_SRCS "pgp-cert.c" "pgpemu.c" "secrets.c")
-set(COMPONENT_ADD_INCLUDEDIRS ".")
+set(SOURCES "pgp_cert.c" "pgpemu.c" "pgp_display.c" "secrets.c" "pgp_images.c")
 
-register_component()
+idf_component_register(SRCS ${SOURCES}
+        INCLUDE_DIRS "."
+        REQUIRES
+            tft
+            bt)

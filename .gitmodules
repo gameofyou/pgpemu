@@ -1,0 +1,3 @@
+[submodule "pgpemu-esp32/externals/ESP32_TFT_library"]
+	path = pgpemu-esp32/externals/ESP32_TFT_library
+	url = https://github.com/gameofyou/ESP32_TFT_library.git

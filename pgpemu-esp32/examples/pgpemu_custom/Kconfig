@@ -1,0 +1,9 @@
+menu "PGPemu Custom"
+
+config PGPEMU_CUSTOM
+   bool "Enable customisation"
+   default 1
+   help
+     Enable custom keys, and splash screen 
+
+endmenu

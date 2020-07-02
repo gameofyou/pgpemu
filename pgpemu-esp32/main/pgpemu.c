@@ -19,9 +19,11 @@
 #include "esp_gatts_api.h"
 #include "esp_bt_main.h"
 #include "pgpemu.h"
-#include "pgp-cert.h"
+#include "pgp_cert.h"
 #include "secrets.h"
 #include "esp_gatt_common_api.h"
+
+#include "pgp_display.h"
 
 #define GATTS_TABLE_TAG "PGPEMU"
 
@@ -1015,7 +1017,7 @@ void app_main()
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK( ret );
-
+    pgp_display_init();
 
     /* Configure parameters of an UART driver,
      * communication pins and install the driver */
