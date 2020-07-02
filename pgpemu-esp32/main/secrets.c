@@ -1,6 +1,6 @@
 #include "sdkconfig.h"
 
-#ifndef PGPEMU_CUSTOM
+#ifndef CONFIG_PGPEMU_CUSTOM
 #include "secrets.h"
 
 //you can uncomment this line if you just want to test out the algorithms

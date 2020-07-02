@@ -5,8 +5,8 @@
 
 #include "sdkconfig.h"
 
-#ifdef PGPEMU_CUSTOM
-#include <pgpemu_custom.h>
+#ifdef CONFIG_PGPEMU_CUSTOM
+#include "pgpemu_custom.h"
 #else
 extern uint8_t pgpemu_jpg[];
 unsigned int pgpemu_jpg_len;
