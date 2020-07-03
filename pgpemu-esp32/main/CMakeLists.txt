@@ -1,7 +1,8 @@
-set(SOURCES "pgp_cert.c" "pgpemu.c" "pgp_display.c" "secrets.c" "pgp_images.c")
-set(REQCOMP "bt")
-if(CONFIG_TFT_PREDEFINED_DISPLAY_TYPE)
-     list(APPEND REQCOMP "tft")
+set(SOURCES "pgp_cert.c" "pgpemu.cc" "pgp_display.cc" "pgp_utils.cc" "secrets.c" "pgp_images.c")
+if(EXISTS ../externals/ESP32_TFT_library)
+  set(REQCOMP "bt" "tft")
+else()
+  set(REQCOMP "bt")
 endif()
 
 idf_component_register(SRCS ${SOURCES}

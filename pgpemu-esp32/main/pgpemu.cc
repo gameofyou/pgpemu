@@ -9,7 +9,6 @@
 
 #define EX_UART_NUM UART_NUM_0
 
-
 #include "esp_system.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
@@ -20,6 +19,7 @@
 #include "esp_bt_main.h"
 #include "pgpemu.h"
 #include "pgp_cert.h"
+#include "pgp_utils.h"
 #include "secrets.h"
 #include "esp_gatt_common_api.h"
 
@@ -33,19 +33,19 @@
 #define PGP_DEVICE_NAME          "Pokemon GO Plus"
 //#define PGP_DEVICE_NAME          "Pokemon PBP"
 /* #define SVC_INST_ID                 0 */
-/* #define BATTERY_INST_ID                 1 */
-/* #define LED_BUTTON_INST_ID                 2 */
+/* #define BATTERY_INST_ID             1 */
+/* #define LED_BUTTON_INST_ID          2 */
 
 
 #define BATTERY_INST_ID                 0
 #define LED_BUTTON_INST_ID              1
-#define CERT_INST_ID              2
+#define CERT_INST_ID                    2
 
 
 /* The max length of characteristic value. When the gatt client write or prepare write,
 *  the data length must be less than MAX_VALUE_LENGTH.
 */
-#define MAX_VALUE_LENGTH 500
+#define MAX_VALUE_LENGTH             500
 #define PREPARE_BUF_MAX_SIZE        1024
 #define CHAR_DECLARATION_SIZE       (sizeof(uint8_t))
 
@@ -59,25 +59,21 @@ uint16_t battery_handle_table[BATTERY_LAST_IDX];
 uint16_t led_button_handle_table[LED_BUTTON_LAST_IDX];
 uint16_t certificate_handle_table[CERT_LAST_IDX];
 
-uint16_t last_conn_id  = 0;
+uint16_t last_conn_id = 0;
 esp_gatt_if_t last_if = 0;
 
 //in ESP32, bt_mac is base_mac + 2
 uint8_t mac[6];
 uint8_t bt_mac[6];
 
-//uint8_t mac[] = {0x98, 0xB6, 0xE9, 0x13, 0xB5, 0x91};
-//uint8_t bt_mac[] = {0x98, 0xB6, 0xE9, 0x13, 0xB5, 0x93};
-
-
 uint8_t session_key[16];
 int cert_state = 0;
 
 
 typedef struct {
-	uint16_t handle;
-    uint8_t                 *prepare_buf;
-    int                     prepare_len;
+    uint16_t   handle;
+    uint8_t   *prepare_buf;
+    int        prepare_len;
 } prepare_type_env_t;
 
 static QueueHandle_t button_queue;
@@ -89,7 +85,6 @@ static uint8_t raw_adv_data[] = {
         0x02, 0x01, 0x06,
         /* device name */
 	0x10, 0x09, 'P', 'o', 'k', 'e', 'm', 'o', 'n', ' ', 'G', 'O', ' ','P', 'l', 'u','s',
-        //0x0c, 0x09, 'P', 'o', 'k', 'e', 'm', 'o', 'n', ' ', 'P', 'B', 'P',
 	0x06, 0x20, 0x62, 0x04, 0xC5, 0x21, 0x00
 };
 static uint8_t raw_scan_rsp_data[] = {
@@ -101,12 +96,13 @@ static uint8_t raw_scan_rsp_data[] = {
         0x03, 0x03, 0xFF,0x00
 };
 
-
 static esp_ble_adv_params_t adv_params = {
     .adv_int_min         = 0x20,
     .adv_int_max         = 0x40,
     .adv_type            = ADV_TYPE_IND,
     .own_addr_type       = BLE_ADDR_TYPE_PUBLIC,
+    .peer_addr           = { 0 },
+    .peer_addr_type      = BLE_ADDR_TYPE_PUBLIC,
     .channel_map         = ADV_CHNL_ALL,
     .adv_filter_policy   = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
 };
@@ -130,12 +126,14 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event,
 					esp_gatt_if_t gatts_if, esp_ble_gatts_cb_param_t *param);
 
 /* One gatt-based profile one app_id and one gatts_if, this array will store the gatts_if returned by ESP_GATTS_REG_EVT */
-static struct gatts_profile_inst pgp_profile_tab[PROFILE_NUM] = {
-    [PROFILE_APP_IDX] = {
-        .gatts_cb = gatts_profile_event_handler,
-        .gatts_if = ESP_GATT_IF_NONE,       /* Not get the gatt_if, so initial is ESP_GATT_IF_NONE */
-    },
-};
+static struct gatts_profile_inst pgp_profile_tab[PROFILE_NUM];
+
+void init_pgp()
+{
+  zero((uint8_t *) &pgp_profile_tab, sizeof(gatts_profile_inst)*PROFILE_NUM); 
+  pgp_profile_tab[PROFILE_APP_IDX].gatts_cb   = gatts_profile_event_handler;
+  pgp_profile_tab[PROFILE_APP_IDX].gatts_if = ESP_GATT_IF_NONE;      /* Not get the gatt_if, so initial is ESP_GATT_IF_NONE */
+}
 
 /* Service */
 // static const uint16_t GATTS_SERVICE_UUID_TEST      = 0x00FF;
@@ -146,7 +144,7 @@ static struct gatts_profile_inst pgp_profile_tab[PROFILE_NUM] = {
 static const uint16_t primary_service_uuid         = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t character_declaration_uuid   = ESP_GATT_UUID_CHAR_DECLARE;
 static const uint16_t character_client_config_uuid = ESP_GATT_UUID_CHAR_CLIENT_CONFIG;
-static const uint8_t char_prop_read                =  ESP_GATT_CHAR_PROP_BIT_READ;
+static const uint8_t char_prop_read                = ESP_GATT_CHAR_PROP_BIT_READ;
 static const uint8_t char_prop_write               = ESP_GATT_CHAR_PROP_BIT_WRITE;
 // static const uint8_t char_prop_read_write_notify   = ESP_GATT_CHAR_PROP_BIT_WRITE | ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
 static const uint8_t char_prop_read_notify   = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_NOTIFY;
@@ -196,9 +194,9 @@ uint8_t GATTS_CHAR_UUID_UNKNOWN[ESP_UUID_LEN_128] = {0xee, 0x9a, 0x93, 0xb9, 0xb
 uint8_t GATTS_CHAR_UUID_UPDATE_REQUEST[ESP_UUID_LEN_128] = {0xef, 0x9a, 0x93, 0xb9, 0xb5, 0x82, 0x4c, 0x5c, 0xa3, 0x63, 0xcb, 0x67, 0x62, 0x4, 0xc5, 0x21};
 uint8_t GATTS_CHAR_UUID_FW_VERSION[ESP_UUID_LEN_128] = {0xf0, 0x9a, 0x93, 0xb9, 0xb5, 0x82, 0x4c, 0x5c, 0xa3, 0x63, 0xcb, 0x67, 0x62, 0x4, 0xc5, 0x21};
 
-static const uint8_t led_char_value[100];
+static const uint8_t led_char_value[100] = { 0 };
 
-static const uint8_t button_value[2];
+static const uint8_t button_value[2] = { 0 };
 
 uint8_t GATTS_SERVICE_UUID_CERTIFICATE[ESP_UUID_LEN_128] = {0x37, 0x8e, 0xd, 0xef, 0x8e, 0x8b, 0x7f, 0xab, 0x33, 0x44, 0x89, 0x5b, 0x9, 0x77, 0xe8, 0xbb};
 uint8_t GATTS_CHAR_UUID_CENTRAL_TO_SFIDA[ESP_UUID_LEN_128] =  {0x38, 0x8e, 0xd, 0xef, 0x8e, 0x8b, 0x7f, 0xab, 0x33, 0x44, 0x89, 0x5b, 0x9, 0x77, 0xe8, 0xbb};
@@ -791,7 +789,7 @@ static void gatts_profile_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_
         case ESP_GATTS_CONNECT_EVT:
             ESP_LOGI(GATTS_TABLE_TAG, "ESP_GATTS_CONNECT_EVT, conn_id = %d", param->connect.conn_id);
             esp_log_buffer_hex(GATTS_TABLE_TAG, param->connect.remote_bda, 6);
-            esp_ble_conn_update_params_t conn_params = {0};
+            esp_ble_conn_update_params_t conn_params;
             memcpy(conn_params.bda, param->connect.remote_bda, sizeof(esp_bd_addr_t));
             /* For the IOS system, please reference the apple official documents about the ble connection parameters restrictions. */
             conn_params.latency = 0;
@@ -1006,7 +1004,7 @@ static void uart_event_task(void *pvParameters)
 }
 
 
-void app_main()
+void app_main_cc()
 {
     esp_err_t ret;
 
@@ -1019,6 +1017,8 @@ void app_main()
     ESP_ERROR_CHECK( ret );
     pgp_display_init();
 
+    init_pgp();
+
     /* Configure parameters of an UART driver,
      * communication pins and install the driver */
     uart_config_t uart_config = {
@@ -1026,7 +1026,9 @@ void app_main()
         .data_bits = UART_DATA_8_BITS,
         .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+	.rx_flow_ctrl_thresh = 0,
+	.use_ref_tick = 0
     };
 
     uart_param_config(EX_UART_NUM, &uart_config);
@@ -1122,4 +1124,12 @@ void app_main()
     if (local_mtu_ret){
         ESP_LOGE(GATTS_TABLE_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
     }
+}
+
+extern "C" {
+
+  void app_main()
+  {
+    app_main_cc();
+  }
 }

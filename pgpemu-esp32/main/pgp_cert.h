@@ -1,6 +1,10 @@
 #ifndef __PGP_CERT_H__
 #define __PGP_CERT_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 #ifdef ESP_PLATFORM
@@ -86,5 +90,8 @@ void pgp_generate_reconnect_response(const uint8_t *key,
 
 int pgp_decrypt_next(const uint8_t *data, const uint8_t *key, uint8_t *output);
 	
-
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* __PGP_CERT_H__ */

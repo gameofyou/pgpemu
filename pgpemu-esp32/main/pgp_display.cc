@@ -5,7 +5,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <cstring>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -16,8 +16,10 @@
 
 #include "pgp_display.h"
 #include "pgp_images.h"
+#include "pgp_utils.h"
 
 #define SPI_BUS TFT_HSPI_HOST
+
 
 void pgp_display_init(void)
 {
@@ -27,21 +29,23 @@ void pgp_display_init(void)
   tft_max_rdclock = 8000000;
   TFT_PinsInit();
 
-  spi_lobo_bus_config_t buscfg={
-        .miso_io_num=PIN_NUM_MISO,                              // set SPI MISO pin
-        .mosi_io_num=PIN_NUM_MOSI,                              // set SPI MOSI pin
-        .sclk_io_num=PIN_NUM_CLK,                               // set SPI CLK pin
-        .quadwp_io_num=-1,
-        .quadhd_io_num=-1,
-                .max_transfer_sz = 6*1024,
-  };
-  spi_lobo_device_interface_config_t devcfg={
-        .clock_speed_hz=8000000,                // Initial clock out at 8 MHz
-        .mode=0,                                // SPI mode 0
-        .spics_io_num=-1,                       // we will use external CS pin
-                .spics_ext_io_num=PIN_NUM_CS,           // external CS pin
-                .flags=LB_SPI_DEVICE_HALFDUPLEX,        // ALWAYS SET  to HALF DUPLEX MODE!! for display spi
-  };
+  spi_lobo_bus_config_t buscfg;
+  zero((uint8_t *)&buscfg, sizeof(spi_lobo_bus_config_t));
+  buscfg.miso_io_num=PIN_NUM_MISO;                              // set SPI MISO pin
+  buscfg.mosi_io_num=PIN_NUM_MOSI;                              // set SPI MOSI pin
+  buscfg.sclk_io_num=PIN_NUM_CLK;                               // set SPI CLK pin
+  buscfg.quadwp_io_num=-1;
+  buscfg.quadhd_io_num=-1;
+  buscfg.max_transfer_sz = 6*1024;
+  
+  spi_lobo_device_interface_config_t devcfg;
+  zero((uint8_t *)&devcfg,sizeof(spi_lobo_device_interface_config_t));
+  devcfg.clock_speed_hz=8000000;                // Initial clock out at 8 MHz
+  devcfg.mode=0;                                // SPI mode 0
+  devcfg.spics_io_num=-1;                       // we will use external CS pin
+  devcfg.spics_ext_io_num=PIN_NUM_CS;           // external CS pin
+  devcfg.flags=LB_SPI_DEVICE_HALFDUPLEX;        // ALWAYS SET  to HALF DUPLEX MODE!! for display spi
+  
   vTaskDelay(500 / portTICK_RATE_MS);
   ret=spi_lobo_bus_add_device(SPI_BUS, &buscfg, &devcfg, &spi);
   assert(ret==ESP_OK);
@@ -54,9 +58,6 @@ void pgp_display_init(void)
 #endif
 
 
-
-//  vfs_spiffs_register();
-/*
         color_t color;
         color.r  = 252;
         color.g  = 0;
@@ -68,7 +69,7 @@ void pgp_display_init(void)
                 w = 100;
                 h = 100;
          TFT_fillRect(x,y,w,h,color);
-*/
+
     TFT_jpg_image(CENTER, CENTER, 0, NULL, PGPEMU_SPLASH, PGPEMU_SPLASH_LEN);
    tft_fg = TFT_CYAN;
 //TFT_print("Time is not set yet", CENTER, CENTER);

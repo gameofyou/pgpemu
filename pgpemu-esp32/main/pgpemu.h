@@ -1,3 +1,6 @@
+#ifndef __PGPEMU_H__
+#define __PGPEMU_H__
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,3 +44,5 @@ enum {
   IDX_CHAR_SFIDA_TO_CENTRAL_VAL,  
   CERT_LAST_IDX
 };
+
+#endif /* __PGPEMU_H__ */
